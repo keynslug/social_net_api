@@ -23,18 +23,20 @@ First you need to write applications configuration.
 Exapmple config:
 
     {network, vkontakte},                                        %% network type
-    {app_id, "2268542"},                                         %% application id
+    {app_id, "1234567"},                                         %% application id
     {secret_key, "sdfasdfasdfasd"},                              %% applications secret key
-    {client_options, [                                           %% client part options
-        {host, "api.vkontakte.ru"}                                %% host, which recieve requests
+    {client, [                                                   %% client part options
+        {host, "api.vkontakte.ru"}                               %% host which will recieve requests
     ]}
-    % for odnoklassniki or mymail
-    %{server_options, [                                          %% server part options
-    %   {ip, "0.0.0.0"},                                         %% http callback bind host
-    %   {port, 31337},                                           %% http callback bind port
-    %   {callback, {my_callback_module, my_callback_fun}},       %% callback function, may be "{module_name, function_name}" or "{module_name, function_name, ArgumentsList}"
-    %   {mode, parsed}                                           %% parse or not callback request, may be "parsed" or "raw", by default is parsed
-    %]}
+
+In the case of odnoklassniki or mymail you should start a server too:
+
+    {server, [                                                  %% server part options
+       {ip, "0.0.0.0"},                                         %% http callback bind host
+       {port, 31337},                                           %% http callback bind port
+       {callback, {my_callback_module, my_callback_fun}},       %% callback function, may be "{module_name, function_name}" or "{module_name, function_name, ArgumentsList}"
+       {mode, parsed}                                           %% parse or not callback request, may be "parsed" or "raw", by default is parsed
+    ]}
 
 Then start application social_net_api:
 
