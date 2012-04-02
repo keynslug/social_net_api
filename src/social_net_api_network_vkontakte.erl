@@ -32,6 +32,9 @@
     get_currency_multiplier/0
 ]).
 
+-define(REQUEST_LIMIT, 5).
+-define(INTERVAL_LIMIT, 1000).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 init_client() -> [].
@@ -114,16 +117,18 @@ invoke_method({Group, Function}, Args, State) ->
 %% Do not send more than 5 requests per second:
 wait_if_needed(History) ->
     T1 = erlang:now(),
-    case length(History) =:= 5 of
+    case length(History) =:= (?REQUEST_LIMIT - 1) of
         true  ->
-            T2 = lists:nth(5, History),
+            T2 = lists:last(History),
             case timer:now_diff(T1, T2) div 1000 of
-                Delta when Delta >= 1000 -> ok;
-                Delta -> timer:sleep(1000 - Delta)
+                Delta when Delta >= ?INTERVAL_LIMIT -> 
+                    ok;
+                Delta -> 
+                    timer:sleep(?INTERVAL_LIMIT - Delta)
             end,
             [erlang:now()];
-        false ->
-            [erlang:now()|History]
+        _False ->
+            [erlang:now() | History]
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -132,7 +137,7 @@ send_message(Message, Users, State) ->
     Fun =
     fun(UserList, {Acc, TmpState}) ->
         {Reply, NewState} = do_send(Message, UserList, TmpState),
-        {[Reply|Acc], NewState}
+        {[Reply | Acc], NewState}
     end,
     {Result, NewState} = lists:foldl(Fun, {[], State}, social_net_api_utils:split(100, Users)),
     {lists:concat(lists:reverse(Result)), NewState}.
@@ -151,6 +156,12 @@ parse_response(Users, {struct, [{<<"error">>, {struct, ErrorInfo}}]}) ->
 parse_response(Users, {struct,[{<<"response">>,Result}]}) ->
     {Delivered, Undelivered} = social_net_api_utils:split_delivered(Users, Result),
     lists:zip(Delivered, lists:duplicate(length(Delivered), ok)) ++
-    lists:zip(Undelivered, lists:duplicate(length(Undelivered), {error, undelivered})).
+    lists:zip(Undelivered, lists:duplicate(length(Undelivered), {error, undelivered}));
+
+parse_response(Users, Error = {error, _Reason}) ->
+    lists:zip(Users, lists:duplicate(length(Users), Error));
+
+parse_response(Users, Error) ->
+    lists:zip(Users, lists:duplicate(length(Users), {error, Error})).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

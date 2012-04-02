@@ -86,10 +86,10 @@ send_message(Message, Users, State) ->
     Fun =
     fun(UserID, {Acc, TmpState}) ->
         {Reply, NewState} = do_send(Message, UserID, TmpState),
-        {[Reply|Acc], NewState}
+        {[Reply | Acc], NewState}
     end,
     {Result, NewState} = lists:foldl(Fun, {[], State}, Users),
-    {lists:concat(lists:reverse(Result)), NewState}.
+    {lists:reverse(Result), NewState}.
 
 do_send(Message, UserID, State) ->
     Method = {notifications, sendSimple},
@@ -97,11 +97,19 @@ do_send(Message, UserID, State) ->
     {Result, NewState} = invoke_method(Method, Args, State),
     {parse_response(UserID, Result), NewState}.
 
-parse_response(UserID, true) -> [{social_net_api_utils:to_integer(UserID), ok}];
+parse_response(UserID, true) -> 
+    {UserID, ok};
+
 parse_response(UserID, {struct,ErrorInfo}) ->
     Code = proplists:get_value(<<"error_code">>, ErrorInfo),
     ErrMsg = proplists:get_value(<<"error_msg">>, ErrorInfo),
-    [{social_net_api_utils:to_integer(UserID), {error, {Code, ErrMsg}}}].
+    {UserID, {error, {Code, ErrMsg}}};
+
+parse_response(UserID, Error = {error, _Reason}) ->
+    {UserID, Error};
+
+parse_response(UserID, Error) ->
+    {UserID, {error, Error}}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

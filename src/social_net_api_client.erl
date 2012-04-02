@@ -47,7 +47,7 @@ invoke_method(Method, Args) ->
 
 send_message(Message, Users) ->
     UnicodeMessage = unicode:characters_to_binary(Message),
-    gen_server:call(?MODULE, {send_message, UnicodeMessage, Users}).
+    gen_server:call(?MODULE, {send_message, UnicodeMessage, Users}, infinity).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -60,10 +60,13 @@ handle_call({invoke_method, Method, Args}, _, State) ->
     {Reply, NewState} = Module:invoke_method(Method, Args, State),
     {reply, Reply, NewState};
 
-handle_call({send_message, Message, Users}, _, State) ->
+handle_call({send_message, Message, Users}, From, State) ->
     Module = social_net_api_settings:network_mod(),
-    {Reply, NewState} = Module:send_message(Message, Users, State),
-    {reply, Reply, NewState}.
+    spawn_link(fun () -> 
+        {Reply, _State} = Module:send_message(Message, Users, State),
+        gen_server:reply(From, Reply)
+    end),
+    {noreply, State}.
 
 handle_cast(_, State) ->
     {noreply, State}.

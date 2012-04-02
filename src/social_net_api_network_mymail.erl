@@ -104,7 +104,13 @@ parse_response(Users, {struct, [{<<"error">>, {struct, ErrorInfo}}]}) ->
 parse_response(Users, Result) when is_list(Result) ->
     {Delivered, Undelivered} = social_net_api_utils:split_delivered(Users, Result),
     lists:zip(Delivered, lists:duplicate(length(Delivered), ok)) ++
-    lists:zip(Undelivered, lists:duplicate(length(Undelivered), {error, undelivered})).
+    lists:zip(Undelivered, lists:duplicate(length(Undelivered), {error, undelivered}));
+
+parse_response(Users, Error = {error, _Reason}) ->
+    lists:zip(Users, lists:duplicate(length(Users), Error));
+
+parse_response(Users, Error) ->
+    lists:zip(Users, lists:duplicate(length(Users), {error, Error})).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
