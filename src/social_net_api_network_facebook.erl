@@ -105,14 +105,20 @@ invoke_callback(raw, Callback, Request) ->
     catch social_net_api_utils:call_functor(Callback, [Request]);
 
 invoke_callback(parsed, Callback, Request) ->
-    {ok, {Details}} = json:decode(proplists:get_value(<<"order_details">>, Request)),
-    [{Item}] = proplists:get_value(<<"items">>, Details),
-    UID             = drimmi_ecore_utils:to_list(social_net_api_utils:find(<<"buyer">>, Details)),
-    TransactionID   = drimmi_ecore_utils:to_list(social_net_api_utils:find(<<"order_id">>, Details)),
-    ProductCode     = drimmi_ecore_utils:to_list(social_net_api_utils:find(<<"item_id">>, Item)),
-    Amount          = drimmi_ecore_utils:to_list(social_net_api_utils:find(<<"amount">>, Details)),
-    ProductOption   = nil,
-    Profit          = nil,
+
+    %% Here I used mochijson2, since json library has a bug with a large 32/64 bit integers.
+    %% which was fixed in alternate repository https://github.com/hio/erlang-json.git,
+    %% but some other issues was introduced (https://github.com/hio/erlang-json/issues/1).
+    %% It is probably a good idea to switch to it when issue will be fixed.
+    {struct, Details} = mochijson2:decode(proplists:get_value(<<"order_details">>, Request)),
+
+    [{struct, Item}] = proplists:get_value(<<"items">>, Details),
+    UID              = drimmi_ecore_utils:to_list(social_net_api_utils:find(<<"buyer">>, Details)),
+    TransactionID    = drimmi_ecore_utils:to_list(social_net_api_utils:find(<<"order_id">>, Details)),
+    ProductCode      = drimmi_ecore_utils:to_list(social_net_api_utils:find(<<"item_id">>, Item)),
+    Amount           = drimmi_ecore_utils:to_list(social_net_api_utils:find(<<"amount">>, Details)),
+    ProductOption    = nil,
+    Profit           = nil,
     invoke_callback(raw, Callback, {{TransactionID, UID}, {ProductCode, ProductOption}, {Amount, Profit}}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -156,7 +162,13 @@ base64url_decode(Data0) ->
 parse_signed_request(Request) ->
     [SHA, Data] = re:split(Request, "\\."),
     Payload = base64url_decode(Data),
-    {ok, {JSON}} = json:decode(Payload),
+
+    %% Here I used mochijson2, since json library has a bug with a large 32/64 bit integers.
+    %% which was fixed in alternate repository https://github.com/hio/erlang-json.git,
+    %% but some other issues was introduced (https://github.com/hio/erlang-json/issues/1).
+    %% It is probably a good idea to switch to it when issue will be fixed.
+    {struct, JSON} = mochijson2:decode(Payload),
+
     case proplists:get_value(<<"algorithm">>, JSON) of
         <<"HMAC-SHA256">> ->
             SecretKey = social_net_api_settings:secret_key(),
