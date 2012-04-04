@@ -69,7 +69,7 @@ process_payment({_,Args}, State) ->
         Method   = proplists:get_value("method", Args),
         Signed   = proplists:get_value("signed_request", Args),
         Parsed   = parse_signed_request(Signed),
-        {Request} = proplists:get_value(<<"credits">>, Parsed),
+        {struct, Request} = proplists:get_value(<<"credits">>, Parsed),
         Response = handle_request(Method, Request),
         {{"application/json", Response}, State}
     catch
